@@ -237,7 +237,7 @@ def _draw_and_save_output_image(image_path, detections, img_size, output_path, c
     filename = os.path.basename(image_path).split(".")[0]
 
     json_name = image_id + '.json'
-    json_path = os.path.join(output_path, 'json', f"{filename}.json")
+    json_path = os.path.join(output_path, f"{filename}.json")
 
     with open(json_path, 'w', encoding="utf-8") as make_file:
         json.dump(total, make_file, ensure_ascii=False, indent="\t")

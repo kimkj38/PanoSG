@@ -165,7 +165,7 @@ def inference(net, x, device, ori_width, ori_height, top_pad, bottom_pad, flip=F
     crop_width = int(W*0.35)
     crop_cor_id = cor_id[cor_id[:,0]>crop_width] #마스킹 부분 제외한 cor_id
     start_points = [[crop_width, crop_cor_id[0,1]], [crop_width, crop_cor_id[1,1]]] # crop되는 영역의 points
-    finish_points = [[ori_width,crop_cor_id[-2,1]], [ori_width, crop_cor_id[-1,1]]] # 오른쪽 끝의 points
+    finish_points = [[W,crop_cor_id[-2,1]], [W, crop_cor_id[-1,1]]] # 오른쪽 끝의 points
     new_cor_id = np.concatenate([start_points, crop_cor_id, finish_points]) #start_points와 finish_points를 포함한 cor_id
 
     # boundary 영역의 bbox 구하기(각각 전체 너비의 10%에 해당하는 영역)
@@ -185,6 +185,7 @@ def inference(net, x, device, ori_width, ori_height, top_pad, bottom_pad, flip=F
         bbox = [new_cor_id[i][0], new_cor_id[i][1], new_cor_id[i+3][0], new_cor_id[i+3][1]]
         bbox_list.append(bbox)
 
+
     # bouonding box 원본 사이즈로 바꿔주기
     bbox_list = np.array(bbox_list)
     bbox_list[:,0] *= ori_width
@@ -192,6 +193,7 @@ def inference(net, x, device, ori_width, ori_height, top_pad, bottom_pad, flip=F
     bbox_list[:,1] *= ori_height
     bbox_list[:,3] *= ori_height
     bbox_list = bbox_list.astype(int)
+
 
     # boundary box 원본 사이즈로 바꿔주기
     boundary = np.array(boundary)
@@ -240,7 +242,6 @@ if __name__ == '__main__':
     # Multiple
     paths = sorted(glob.glob(args.img_glob+"/*"))
 
-    print(len(paths))
     if len(paths) == 0:
         print('no images found')
     for path in paths:
@@ -266,10 +267,10 @@ if __name__ == '__main__':
             img_pil = Image.open(i_path)
             w, h = img_pil.size
 
-            # plot 생성
-            plt.figure()
-            fig, ax = plt.subplots(1)
-            ax.imshow(img_pil)
+            # # plot 생성
+            # plt.figure()
+            # fig, ax = plt.subplots(1)
+            # ax.imshow(img_pil)
         
 
             # (1024, 512)로 resize    
@@ -308,32 +309,41 @@ if __name__ == '__main__':
             total_bbox = np.concatenate([boundary, bbox_list])
             
             # json 파일 만들기  
-            total = dict()
+            #total = dict()
             img = dict()
             
+            wall_label = 1001
             for i, (x1, y1, x2, y2) in enumerate(total_bbox):
                 obj = dict()
-                # 두번째까지는 boundary(label 999로 정의)
-                if i < 2:
+                
+                # 두번째까지는 boundary(label 999, 1000으로 정의)
+                if i == 0:
                     obj['label'] = 999
                     obj['bbox'] = [int(x1), int(y1), int(x2), int(y2)]
                     obj_index = "boundary_{}".format(i)
                     img[obj_index] = obj
-                
-                # wall은 label 1000으로 정의
-                else:
+
+                elif i == 1:
                     obj['label'] = 1000
+                    obj['bbox'] = [int(x1), int(y1), int(x2), int(y2)]
+                    obj_index = "boundary_{}".format(i)
+                    img[obj_index] = obj
+                
+                # wall은 label 1001~으로 정의
+                else:
+                    obj['label'] = wall_label
                     obj['bbox'] = [int(x1), int(y1), int(x2), int(y2)]
                     obj_index = "wall_{}".format(i-2)
                     img[obj_index] = obj
-            total[image_id] = img
+                    wall_label += 1
+            #total[image_id] = img
 
             # json 파일 저장
             json_name = image_id + ".json"
-            json_path = os.path.join(os.getcwd(), "assets", "bbox", f"{filename}.json")
+            json_path = os.path.join(args.output_dir, f"{filename}.json")
 
             with open(json_path, 'w', encoding="utf-8") as make_file:
-                json.dump(total, make_file, ensure_ascii=False, indent="\t")
+                json.dump(img, make_file, ensure_ascii=False, indent="\t")
 
             # # wall bbox 그리기
             # for x1,y1,x2,y2 in bbox_list:
@@ -368,8 +378,8 @@ if __name__ == '__main__':
             # plt.savefig(image_path, bbox_inches="tight", pad_inches=0.0)
             # plt.close()
 
-            # # Output result
-            # with open(os.path.join(args.output_dir, k + '.json'), 'w') as f:
+            # #Output result
+            # with open(os.path.join(args.output_dir, filename + '.json'), 'w') as f:
             #     json.dump({
             #         'z0': float(z0),
             #         'z1': float(z1),
@@ -377,7 +387,7 @@ if __name__ == '__main__':
             #     }, f)
 
             # if vis_out is not None:
-            #     vis_path = os.path.join(args.output_dir, k + '.raw.png')
+            #     vis_path = os.path.join(args.output_dir, filename + '.raw.png')
             #     vh, vw = vis_out.shape[:2]
             #     Image.fromarray(vis_out)\
             #          .resize((vw//2, vh//2), Image.LANCZOS)\
