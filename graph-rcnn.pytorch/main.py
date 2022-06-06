@@ -17,24 +17,24 @@ from lib.scene_parser.rcnn.utils.miscellaneous import mkdir, save_config, get_ti
 from lib.scene_parser.rcnn.utils.comm import synchronize, get_rank
 from lib.scene_parser.rcnn.utils.logger import setup_logger
 
-def train(cfg, args):
+def train(cfg, args, split):
     """
     train scene graph generation model
     """
     arguments = {}
     arguments["iteration"] = 0
-    model = build_model(cfg, arguments, args.local_rank, args.distributed)
+    model = build_model(cfg, arguments, args.local_rank, args.distributed, split)
     model.train()
     return model
 
-def test(cfg, args, model=None):
+def test(cfg, args, split, model=None):
     """
     test scene graph generation model
     """
     if model is None:
         arguments = {}
         arguments["iteration"] = 0
-        model = build_model(cfg, arguments, args.local_rank, args.distributed)
+        model = build_model(cfg, arguments, args.local_rank, args.distributed, split)
     model.test(visualize=args.visualize)
 
 def main():
@@ -84,9 +84,12 @@ def main():
     save_config(cfg, output_config_path)
 
     if not args.inference:
-        model = train(cfg, args)
+        split = "train"
+        model = train(cfg, args, split)
+        
     else:
-        test(cfg, args)
+        split = "test"
+        test(cfg, args, split)
 
 if __name__ == "__main__":
     main()

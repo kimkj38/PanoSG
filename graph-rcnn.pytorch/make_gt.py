@@ -25,8 +25,7 @@ def merge_json(object_path, wall_path, json_list):
         with open(save_path, 'w') as out:
             json.dump(merge, out, indent='\t')
 
-# merge_json(object_path, wall_path, json_list)
-
+merge_json(object_path, wall_path, json_list)
 
 def count_label(merge_path):
     merged_list = os.listdir(merge_path)
@@ -48,7 +47,8 @@ def count_label(merge_path):
     return total_boxes, classes, classes_count
 
 merge_path = '/tmp/merged_json'
-# total_boxes, classes, classes_count = count_label(merge_path)
+total_boxes, classes, classes_count = count_label(merge_path)
+print(classes_count)
 
 
 # 새로운 인덱스로 바꿔주기
@@ -61,6 +61,7 @@ def reindex(classes, path, type='wall'):
         reindex_dict[old] = new
 
     file_list = os.listdir(path)
+    print(reindex_dict)
 
     for file in file_list:
         file_path = os.path.join(path, file)
@@ -84,9 +85,9 @@ def reindex(classes, path, type='wall'):
         with open(save_path, 'w') as out:
             json.dump(file_json, out, indent='\t')
 
-# reindex(classes, wall_path)
-# reindex(classes, object_path, 'object')
-# reindex(classes, merge_path, 'merge')
+reindex(classes, wall_path)
+reindex(classes, object_path, 'object')
+reindex(classes, merge_path, 'merge')
 
 # wall의 최대 개수->9개
 def max_wall_count():
@@ -118,7 +119,6 @@ def make_triplets():
 
     i=0
     for filename in json_list:
-        print(filename)
         relation_triplet = []
         
         object_file = os.path.join(object_path, filename)
@@ -139,22 +139,23 @@ def make_triplets():
             
             # boundary 1
             if i == 0:
-                triplet1 = [list(wall.values())[i]['label'], list(wall.values())[i+2]['label'], 3]
-                triplet2 = [list(wall.values())[i+2]['label'], list(wall.values())[i]['label'], 2]
+                triplet1 = np.array((list(wall.values())[i]['label'], list(wall.values())[i+2]['label'], 3), dtype='int64')
+                triplet2 = np.array((list(wall.values())[i+2]['label'], list(wall.values())[i]['label'], 2), dtype='int64')
+                print(triplet1.dtype)
                 relation_triplet.append(triplet1)
                 relation_triplet.append(triplet2)
 
             # boundary 2
             elif i == 1:
-                triplet1 = [list(wall.values())[i]['label'], list(wall.values())[-1]['label'], 3]
-                triplet2 = [list(wall.values())[-1]['label'], list(wall.values())[i]['label'], 2]
+                triplet1 = np.array((list(wall.values())[i]['label'], list(wall.values())[-1]['label'], 3), dtype='int64')
+                triplet2 = np.array((list(wall.values())[-1]['label'], list(wall.values())[i]['label'], 2), dtype='int64')
                 relation_triplet.append(triplet1)
                 relation_triplet.append(triplet2)
 
             # walls
             elif i < (len(wall)-1):
-                triplet1 = [list(wall.values())[i]['label'], list(wall.values())[i+1]['label'], 0]
-                triplet2 = [list(wall.values())[i+1]['label'], list(wall.values())[i]['label'], 1]
+                triplet1 = np.array((list(wall.values())[i]['label'], list(wall.values())[i+1]['label'], 0), dtype='int64')
+                triplet2 = np.array((list(wall.values())[i+1]['label'], list(wall.values())[i]['label'], 1), dtype='int64')
                 relation_triplet.append(triplet1)
                 relation_triplet.append(triplet2)
         
@@ -183,37 +184,37 @@ def make_triplets():
         # 정렬에 따라 object 간의 triplet 만들기
         for i, (key, value) in enumerate(obj_cx_sort.items()):
             if i < (len(obj_cx_sort)-1):
-                triplet1 = [merge[list(obj_cx_sort.keys())[i]]['label'], merge[list(obj_cx_sort.keys())[i+1]]['label'], 0]
-                triplet2 = [merge[list(obj_cx_sort.keys())[i+1]]['label'], merge[list(obj_cx_sort.keys())[i]]['label'], 1]
+                triplet1 = np.array((merge[list(obj_cx_sort.keys())[i]]['label'], merge[list(obj_cx_sort.keys())[i+1]]['label'], 0), dtype='int64')
+                triplet2 = np.array((merge[list(obj_cx_sort.keys())[i+1]]['label'], merge[list(obj_cx_sort.keys())[i]]['label'], 1), dtype='int64')
                 relation_triplet.append(triplet1)
                 relation_triplet.append(triplet2)
 
         # object와 boundary 간의 triplet 만들기
         if obj_cx_sort:
-            first_obj_label = merge[list(obj_cx_sort.keys())[0]]['label']
-            last_obj_label = merge[list(obj_cx_sort.keys())[-1]]['label']
+            first_obj_label = int(merge[list(obj_cx_sort.keys())[0]]['label'])
+            last_obj_label = int(merge[list(obj_cx_sort.keys())[-1]]['label'])
             first_obj_cx = list(obj_cx_sort.values())[0]
             last_obj_cx = list(obj_cx_sort.values())[-1]
 
-            boundary0_label = merge[list(merge.keys())[0]]['label']
-            boundary1_label = merge[list(merge.keys())[1]]['label']
+            boundary0_label = int(merge[list(merge.keys())[0]]['label'])
+            boundary1_label = int(merge[list(merge.keys())[1]]['label'])
             boundary0_bbox = merge[list(merge.keys())[0]]['bbox']
             boundary1_bbox = merge[list(merge.keys())[1]]['bbox']
 
             # object가 boundary 영역 안에 있으면 include, belong 아니면 left, right
             if boundary0_bbox[0] < first_obj_cx < boundary0_bbox[2]:
-                triplet1 = [first_obj_label, boundary0_label, 3]
-                triplet2 = [boundary0_label, first_obj_label, 2]
+                triplet1 = np.array((first_obj_label, boundary0_label, 3), dtype='int64')
+                triplet2 = np.array((boundary0_label, first_obj_label, 2), dtype='int64')
             else:
-                triplet1 = [first_obj_label, boundary0_label, 1]
-                triplet2 = [boundary0_label, first_obj_label, 0]
+                triplet1 = np.array((first_obj_label, boundary0_label, 1), dtype='int64')
+                triplet2 = np.array((boundary0_label, first_obj_label, 0), dtype='int64')
 
             if boundary1_bbox[0] < last_obj_cx < boundary1_bbox[2]:
-                triplet3 = [last_obj_label, boundary1_label, 3]
-                triplet4 = [boundary1_label, last_obj_label, 2]
+                triplet3 = np.array((last_obj_label, boundary1_label, 3), dtype='int64')
+                triplet4 = np.array((boundary1_label, last_obj_label, 2), dtype='int64')
             else:
-                triplet3 = [last_obj_label, boundary1_label, 1]
-                triplet4 = [boundary1_label, last_obj_label, 0]
+                triplet3 = np.array((last_obj_label, boundary1_label, 1), dtype='int64')
+                triplet4 = np.array((boundary1_label, last_obj_label, 0(), dtype='int64')
             
             relation_triplet.append(triplet1)
             relation_triplet.append(triplet2)
@@ -240,8 +241,8 @@ def make_triplets():
 
     return relation_triplets
 
-relation_triplets = make_triplets()
-print(len(relation_triplets))
+# relation_triplets = make_triplets()
+# print(len(relation_triplets))
 
     
 
