@@ -1,3 +1,0 @@
-2022-06-06 11:03:15,213 scene_graph_generation INFO: Namespace(algorithm='sg_baseline', batchsize=0, config_file='configs/sgg_res101_joint.yaml', distributed=False, inference=False, instance=-1, local_rank=0, resume=0, session=0, use_freq_prior=False, visualize=False)
-2022-06-06 11:03:15,214 scene_graph_generation INFO: Loaded configuration file configs/sgg_res101_joint.yaml
-2022-06-06 11:03:15,214 scene_graph_generation INFO: Saving config into: logs/config.yml

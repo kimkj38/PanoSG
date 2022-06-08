@@ -123,44 +123,6 @@ def inference(net, x, device, ori_width, ori_height, top_pad, bottom_pad, flip=F
         cor_id[i*2] = wall_bon, y_bon_[0, wall_bon] #ceiling의 좌표는 짝수 corner index
         cor_id[i*2 + 1] = wall_bon, y_bon_[1, wall_bon] #floor의 좌표는 홀수 corner index
 
-        # Generate wall-walls
-        # cor은 corner의 좌표 (corner의 개수/2, 2)
-        # xy_cor에는 type, val, score, action, gpid, u0, u1, tbd가 담긴 list
-
-        # post-processing 안 하게 주석 처리
-
-        # cor, xy_cor = post_proc.gen_ww(xs_, y_bon_[0], z0, tol=abs(0.16 * z1 / 1.6), force_cuboid=force_cuboid)
-        
-        # if not force_cuboid:
-        #     # Check valid (for fear self-intersection) n
-        #     xy2d = np.zeros((len(xy_cor), 2), np.float32)
-        #     for i in range(len(xy_cor)):
-        #         xy2d[i, xy_cor[i]['type']] = xy_cor[i]['val']
-        #         xy2d[i, xy_cor[i-1]['type']] = xy_cor[i-1]['val']
-        #     if not Polygon(xy2d).is_valid:
-        #         print(
-        #             'Fail to generate valid general layout!! '
-        #             'Generate cuboid as fallback.',
-        #             file=sys.stderr)
-        #         xs_ = find_N_peaks(y_cor_, r=r, min_v=0, N=4)[0]
-        #         cor, xy_cor = post_proc.gen_ww(xs_, y_bon_[0], z0, tol=abs(0.16 * z1 / 1.6), force_cuboid=True)
-
-
-
-    # Expand with btn coory
-    # corner의 x좌표, floor, celing이 담긴 (corner의 개수/2, 3)
-    # cor = np.hstack([cor, post_proc.infer_coory(cor[:, 1], z1 - z0, z0)[:, None]]) 
-
-
-
-    # Collect corner position in equirectangular
-    # cor_id는 (corner의 개수, 2). 같은 x좌표에 있는 floor, ceiling을 분리
-    # cor_id = np.zeros((len(cor)*2, 2), np.float32)
-    
-    # for j in range(len(cor)):
-    #     cor_id[j*2] = cor[j, 0], cor[j, 1]
-    #     cor_id[j*2 + 1] = cor[j, 0], cor[j, 2]
-
     # wall의 bbox 구하기
     crop_width = int(W*0.35)
     crop_cor_id = cor_id[cor_id[:,0]>crop_width] #마스킹 부분 제외한 cor_id
@@ -267,10 +229,10 @@ if __name__ == '__main__':
             img_pil = Image.open(i_path)
             w, h = img_pil.size
 
-            # # plot 생성
-            # plt.figure()
-            # fig, ax = plt.subplots(1)
-            # ax.imshow(img_pil)
+            # plot 생성
+            plt.figure()
+            fig, ax = plt.subplots(1)
+            ax.imshow(img_pil)
         
 
             # (1024, 512)로 resize    
@@ -309,7 +271,6 @@ if __name__ == '__main__':
             total_bbox = np.concatenate([boundary, bbox_list])
             
             # json 파일 만들기  
-            #total = dict()
             img = dict()
             
             wall_label = 1001
@@ -336,7 +297,6 @@ if __name__ == '__main__':
                     obj_index = "wall_{}".format(i-2)
                     img[obj_index] = obj
                     wall_label += 1
-            #total[image_id] = img
 
             # json 파일 저장
             json_name = image_id + ".json"
@@ -345,50 +305,48 @@ if __name__ == '__main__':
             with open(json_path, 'w', encoding="utf-8") as make_file:
                 json.dump(img, make_file, ensure_ascii=False, indent="\t")
 
-            # # wall bbox 그리기
-            # for x1,y1,x2,y2 in bbox_list:
-            #     box_w = x2 - x1
-            #     box_h = y2 - y1
+            # wall bbox 그리기
+            for x1,y1,x2,y2 in bbox_list:
+                box_w = x2 - x1
+                box_h = y2 - y1
 
+                # Rectangle patch 생성
+                bbox = patches.Rectangle((x1, y1), box_w, box_h, linewidth=1, edgecolor='r', facecolor="none")
+                ax.add_patch(bbox)
 
-            #     # Rectangle patch 생성
-            #     bbox = patches.Rectangle((x1, y1), box_w, box_h, linewidth=1, edgecolor='r', facecolor="none")
-            #     ax.add_patch(bbox)
+            # boundary bbox 그리기
+            for x1,y1,x2,y2 in boundary:
+                box_w = x2 - x1
+                box_h = y2 - y1
 
-            # # boundary bbox 그리기
-            # for x1,y1,x2,y2 in boundary:
-            #     box_w = x2 - x1
-            #     box_h = y2 - y1
+                # Rectangle patch 생성
+                bbox = patches.Rectangle((x1, y1), box_w, box_h, linewidth=1, edgecolor='b', facecolor="none")
+                ax.add_patch(bbox)                
 
-
-            #     # Rectangle patch 생성
-            #     bbox = patches.Rectangle((x1, y1), box_w, box_h, linewidth=1, edgecolor='b', facecolor="none")
-            #     ax.add_patch(bbox)                
-
-            # # filename 만들기
-            # filename = "bbox_pano_"+i_path.split('_')[-1]
+            # filename 만들기
+            filename = "bbox_pano_"+i_path.split('_')[-1]
             
-            # # wall bbox, boundary bbox 포함한 이미지 저장
-            # plt.axis("off")
-            # plt.gca().xaxis.set_major_locator(NullLocator())
-            # plt.gca().yaxis.set_major_locator(NullLocator())
+            # wall bbox, boundary bbox 포함한 이미지 저장
+            plt.axis("off")
+            plt.gca().xaxis.set_major_locator(NullLocator())
+            plt.gca().yaxis.set_major_locator(NullLocator())
             
-            # image_path = os.path.join(os.getcwd(), 'assets/bbox_img', filename)
+            image_path = os.path.join(os.getcwd(), 'assets/bbox_img', filename)
 
-            # plt.savefig(image_path, bbox_inches="tight", pad_inches=0.0)
-            # plt.close()
+            plt.savefig(image_path, bbox_inches="tight", pad_inches=0.0)
+            plt.close()
 
-            # #Output result
-            # with open(os.path.join(args.output_dir, filename + '.json'), 'w') as f:
-            #     json.dump({
-            #         'z0': float(z0),
-            #         'z1': float(z1),
-            #         'uv': [[float(u), float(v)] for u, v in cor_id],
-            #     }, f)
+            #Output result
+            with open(os.path.join(args.output_dir, filename + '.json'), 'w') as f:
+                json.dump({
+                    'z0': float(z0),
+                    'z1': float(z1),
+                    'uv': [[float(u), float(v)] for u, v in cor_id],
+                }, f)
 
-            # if vis_out is not None:
-            #     vis_path = os.path.join(args.output_dir, filename + '.raw.png')
-            #     vh, vw = vis_out.shape[:2]
-            #     Image.fromarray(vis_out)\
-            #          .resize((vw//2, vh//2), Image.LANCZOS)\
-            #          .save(vis_path)
+            if vis_out is not None:
+                vis_path = os.path.join(args.output_dir, filename + '.raw.png')
+                vh, vw = vis_out.shape[:2]
+                Image.fromarray(vis_out)\
+                     .resize((vw//2, vh//2), Image.LANCZOS)\
+                     .save(vis_path)
